@@ -40,7 +40,7 @@ You can then access the Petclinic at <http://localhost:8080/>.
 You can, of course, run Petclinic in your favorite IDE.
 See below for more details.
 
-## Building a Container
+## Building a Container ##
 
 There is no `Dockerfile` in this project. You can build a container image (if you have a docker daemon) using the Spring Boot build plugin:
 
