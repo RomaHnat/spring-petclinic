@@ -5,7 +5,7 @@ pipeline {
         SONAR_TOKEN = credentials('sonarqube-token') 
         MAVEN_CMD = './mvnw'
         PROJECT_KEY = 'spring-petclinic'
-        SONAR_HOST = 'https://host.docker.internal:9000'
+        SONAR_HOST = 'http://host.docker.internal:9000'
     }
 
     stages {
