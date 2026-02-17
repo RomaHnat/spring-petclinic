@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        SONAR_TOKEN = credentials('squ_5f9c1ac9dfd35891aecca731fd5e84ec4eff473f') 
+        SONAR_TOKEN = credentials('sonarqube-token') 
         MAVEN_CMD = './mvnw'
         PROJECT_KEY = 'spring-petclinic'
         SONAR_HOST = 'https://host.docker.internal:9000'
