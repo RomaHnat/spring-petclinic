@@ -91,8 +91,9 @@ pipeline {
                     sh '''
                         docker run -d \
                           --name petclinic-app \
+                          --link petclinic-mysql:mysql \
                           -e SPRING_PROFILES_ACTIVE=mysql \
-                          -e SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3307/petclinic \
+                          -e SPRING_DATASOURCE_URL=jdbc:mysql://petclinic-mysql:3306/petclinic \
                           -e SPRING_DATASOURCE_USERNAME=petclinic \
                           -e SPRING_DATASOURCE_PASSWORD=petclinic \
                           -p 8080:8080 \
@@ -104,12 +105,15 @@ pipeline {
                     
                     // Verify deployment
                     sh '''
-                        echo "Checking containers..."
-                        docker ps | grep petclinic || echo "Container not running"
-                        docker logs petclinic-app --tail 50
+                        echo "=== Docker Containers ==="
+                        docker ps | grep petclinic
+                        echo ""
+                        echo "=== Application Logs (last 30 lines) ==="
+                        docker logs petclinic-app --tail 30
+                        echo ""
+                        echo "=== Deployment Complete ==="
+                        echo "Application deployed at: http://localhost:8080"
                     '''
-                    
-                    echo 'Application deployed successfully at http://localhost:8080'
                 }
             }
         }
