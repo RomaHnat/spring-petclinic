@@ -58,22 +58,55 @@ pipeline {
         stage('Deploy with Docker') {
             steps {
                 script {
-                    echo 'Deploying application using Docker Compose...'
+                    echo 'Deploying application using Docker...'
                     
                     // Stop and remove existing containers
-                    sh 'docker compose down || true'
+                    sh '''
+                        docker stop petclinic-app || true
+                        docker rm petclinic-app || true
+                        docker stop petclinic-mysql || true
+                        docker rm petclinic-mysql || true
+                    '''
                     
-                    // Build and deploy with Docker Compose V2
-                    sh 'docker compose up -d --build petclinic'
+                    // Start MySQL database
+                    sh '''
+                        docker run -d \
+                          --name petclinic-mysql \
+                          -e MYSQL_ROOT_PASSWORD= \
+                          -e MYSQL_ALLOW_EMPTY_PASSWORD=true \
+                          -e MYSQL_USER=petclinic \
+                          -e MYSQL_PASSWORD=petclinic \
+                          -e MYSQL_DATABASE=petclinic \
+                          -p 3307:3306 \
+                          mysql:9.5
+                    '''
+                    
+                    // Wait for MySQL to be ready
+                    sh 'sleep 15'
+                    
+                    // Build application Docker image
+                    sh 'docker build -t petclinic:latest .'
+                    
+                    // Run application container
+                    sh '''
+                        docker run -d \
+                          --name petclinic-app \
+                          -e SPRING_PROFILES_ACTIVE=mysql \
+                          -e SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3307/petclinic \
+                          -e SPRING_DATASOURCE_USERNAME=petclinic \
+                          -e SPRING_DATASOURCE_PASSWORD=petclinic \
+                          -p 8080:8080 \
+                          petclinic:latest
+                    '''
                     
                     // Wait for application to start
-                    sh 'sleep 10'
+                    sh 'sleep 20'
                     
                     // Verify deployment
                     sh '''
-                        echo "Checking application health..."
-                        docker ps | grep petclinic
-                        curl -f http://localhost:8080/actuator/health || echo "Warning: Health check failed"
+                        echo "Checking containers..."
+                        docker ps | grep petclinic || echo "Container not running"
+                        docker logs petclinic-app --tail 50
                     '''
                     
                     echo 'Application deployed successfully at http://localhost:8080'
