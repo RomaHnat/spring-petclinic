@@ -18,13 +18,13 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh "${MAVEN_CMD} clean compile"
+                sh '${MAVEN_CMD} clean compile'
             }
         }
 
         stage('Test') {
             steps {
-                sh "${MAVEN_CMD} test"
+                sh '${MAVEN_CMD} test'
             }
             post {
                 always {
@@ -35,7 +35,7 @@ pipeline {
 
         stage('Package') {
             steps {
-                sh "${MAVEN_CMD} package"
+                sh '${MAVEN_CMD} package'
             }
             post {
                 always {
@@ -47,7 +47,7 @@ pipeline {
         stage('SonarQube Analysis & Quality Gate') {
             steps {
                 withSonarQubeEnv('SonarQubeLocal') { 
-                    sh "${MAVEN_CMD} clean verify sonar:sonar -Dsonar.projectKey=${PROJECT_KEY} -Dsonar.host.url=${SONAR_HOST} -Dsonar.login=${SONAR_TOKEN}"
+                    sh '${MAVEN_CMD} clean verify sonar:sonar -Dsonar.projectKey=${PROJECT_KEY} -Dsonar.host.url=${SONAR_HOST} -Dsonar.login=${SONAR_TOKEN}'
                 }
                 timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
