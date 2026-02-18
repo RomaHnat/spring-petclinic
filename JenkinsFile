@@ -96,7 +96,7 @@ pipeline {
                           -e SPRING_DATASOURCE_URL=jdbc:mysql://petclinic-mysql:3306/petclinic \
                           -e SPRING_DATASOURCE_USERNAME=petclinic \
                           -e SPRING_DATASOURCE_PASSWORD=petclinic \
-                          -p 8080:8080 \
+                          -p 8081:8080 \
                           petclinic:latest
                     '''
                     
@@ -112,7 +112,7 @@ pipeline {
                         docker logs petclinic-app --tail 30
                         echo ""
                         echo "=== Deployment Complete ==="
-                        echo "Application deployed at: http://localhost:8080"
+                        echo "Application deployed at: http://localhost:8081"
                     '''
                 }
             }
