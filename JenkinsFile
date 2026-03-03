@@ -93,6 +93,44 @@ pipeline {
             }
         }
 
+        stage('Setup Ansible CLI') {
+            steps {
+                script {
+                    env.ANSIBLE_CMD = sh(
+                        script: '''
+                            if command -v ansible-playbook >/dev/null 2>&1; then
+                                command -v ansible-playbook
+                                exit 0
+                            fi
+
+                            mkdir -p "$WORKSPACE/.bin"
+
+                            if command -v pip3 >/dev/null 2>&1; then
+                                pip3 install --user ansible >/dev/null 2>&1
+                            elif command -v pip >/dev/null 2>&1; then
+                                pip install --user ansible >/dev/null 2>&1
+                            else
+                                echo "Neither pip3 nor pip is available on Jenkins agent"
+                                exit 1
+                            fi
+
+                            if [ -x "$HOME/.local/bin/ansible-playbook" ]; then
+                                echo "$HOME/.local/bin/ansible-playbook"
+                            elif [ -x "$WORKSPACE/.local/bin/ansible-playbook" ]; then
+                                echo "$WORKSPACE/.local/bin/ansible-playbook"
+                            else
+                                echo "ansible-playbook was not found after installation"
+                                exit 1
+                            fi
+                        ''',
+                        returnStdout: true
+                    ).trim()
+
+                    echo "Using Ansible binary: ${env.ANSIBLE_CMD}"
+                }
+            }
+        }
+
         stage('Provision Infrastructure (Terraform)') {
             steps {
                 echo 'Starting Terraform provision stage'
@@ -139,7 +177,7 @@ pipeline {
                     sh """
                     echo "[web]" > inventory.ini
                     echo "${env.EC2_HOST} ansible_user=ec2-user" >> inventory.ini
-                    ansible-playbook -i inventory.ini playbook.yml
+                    ${ANSIBLE_CMD} -i inventory.ini playbook.yml
                     """
                 }
             }
