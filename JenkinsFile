@@ -9,7 +9,7 @@ pipeline {
         MAVEN_CMD = './mvnw'
         SONAR_TOKEN = credentials('sonarqube-token')
         PROJECT_KEY = 'spring-petclinic'
-        AWS_CREDENTIALS_ID = 'ec2-ssh-key'
+        AWS_CREDENTIALS_ID = 'aws-terraform-creds'
         EC2_USER = "ec2-user"
         EC2_HOST = "54.162.235.126"
     }
