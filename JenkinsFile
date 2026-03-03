@@ -131,6 +131,58 @@ pipeline {
             }
         }
 
+        stage('Setup Docker CLI') {
+            steps {
+                script {
+                    env.DOCKER_CMD = sh(
+                        script: '''
+                            if command -v docker >/dev/null 2>&1; then
+                                command -v docker
+                                exit 0
+                            fi
+
+                            mkdir -p "$WORKSPACE/.bin"
+
+                            if [ ! -x "$WORKSPACE/.bin/docker" ]; then
+                                cd "$WORKSPACE/.bin"
+                                rm -rf docker docker.tgz
+
+                                ARCH="$(uname -m)"
+                                if [ "$ARCH" = "x86_64" ] || [ "$ARCH" = "amd64" ]; then
+                                    DOCKER_TGZ_URL="https://download.docker.com/linux/static/stable/x86_64/docker-27.3.1.tgz"
+                                elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+                                    DOCKER_TGZ_URL="https://download.docker.com/linux/static/stable/aarch64/docker-27.3.1.tgz"
+                                else
+                                    echo "Unsupported architecture for Docker CLI bootstrap: $ARCH"
+                                    exit 1
+                                fi
+
+                                if command -v curl >/dev/null 2>&1; then
+                                    curl -fsSL -o docker.tgz "$DOCKER_TGZ_URL"
+                                elif command -v wget >/dev/null 2>&1; then
+                                    wget -qO docker.tgz "$DOCKER_TGZ_URL"
+                                else
+                                    echo "Neither curl nor wget is available on Jenkins agent"
+                                    exit 1
+                                fi
+
+                                tar -xzf docker.tgz
+                                mv docker/docker ./docker
+                                chmod +x ./docker
+                                rm -rf docker.tgz docker
+                            fi
+
+                            echo "$WORKSPACE/.bin/docker"
+                        ''',
+                        returnStdout: true
+                    ).trim()
+
+                    echo "Using Docker binary: ${env.DOCKER_CMD}"
+                    sh '${DOCKER_CMD} version'
+                }
+            }
+        }
+
         stage('Provision Infrastructure (Terraform)') {
             steps {
                 echo 'Starting Terraform provision stage'
@@ -173,15 +225,11 @@ pipeline {
 
         stage('Configure EC2 (Ansible)') {
             steps {
-                withCredentials([sshUserPrivateKey(
-                    credentialsId: 'ec2-ssh-key',
-                    keyFileVariable: 'SSH_KEY_FILE',
-                    usernameVariable: 'SSH_USER'
-                )]) {
+                sshagent(['ec2-ssh-key']) {
                     dir("${ANSIBLE_DIR}") {
                         sh """
                         echo "[web]" > inventory.ini
-                        echo "${env.EC2_HOST} ansible_user=${EC2_USER} ansible_ssh_private_key_file=${SSH_KEY_FILE} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'" >> inventory.ini
+                        echo "${env.EC2_HOST} ansible_user=${EC2_USER} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'" >> inventory.ini
                         ANSIBLE_HOST_KEY_CHECKING=False ${ANSIBLE_CMD} -i inventory.ini playbook.yml
                         """
                     }
@@ -191,7 +239,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $DOCKER_IMAGE .'
+                sh '${DOCKER_CMD} build -t $DOCKER_IMAGE .'
             }
         }
 
@@ -202,26 +250,22 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                    sh 'echo $DOCKER_PASS | ${DOCKER_CMD} login -u $DOCKER_USER --password-stdin'
                 }
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                sh 'docker push $DOCKER_IMAGE'
+                sh '${DOCKER_CMD} push $DOCKER_IMAGE'
             }
         }
 
         stage('Deploy to EC2') {
             steps {
-                withCredentials([sshUserPrivateKey(
-                    credentialsId: 'ec2-ssh-key',
-                    keyFileVariable: 'SSH_KEY_FILE',
-                    usernameVariable: 'SSH_USER'
-                )]) {
+                sshagent(['ec2-ssh-key']) {
                     sh """
-                    ssh -i ${SSH_KEY_FILE} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${EC2_USER}@${env.EC2_HOST} << EOF
+                    ssh -o StrictHostKeyChecking=no ${EC2_USER}@${env.EC2_HOST} << EOF
                     docker stop petclinic || true
                     docker rm petclinic || true
                     docker pull ${DOCKER_IMAGE}
