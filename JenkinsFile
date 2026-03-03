@@ -97,11 +97,9 @@ pipeline {
             steps {
                 echo 'Starting Terraform provision stage'
                 sh 'test -n "${TERRAFORM_CMD}" || (echo "TERRAFORM_CMD is empty" && exit 1)'
-                withCredentials([usernamePassword(
-                    credentialsId: 'aws-terraform-creds',
-                    usernameVariable: 'AWS_ACCESS_KEY_ID',
-                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                )]) {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-terraform-creds']]) {
+                    sh 'test -n "$AWS_ACCESS_KEY_ID" || (echo "AWS_ACCESS_KEY_ID is empty" && exit 1)'
+                    sh 'test -n "$AWS_SECRET_ACCESS_KEY" || (echo "AWS_SECRET_ACCESS_KEY is empty" && exit 1)'
                     dir("${TERRAFORM_DIR}") {
                         sh '${TERRAFORM_CMD} version'
                         sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} init'
@@ -114,11 +112,8 @@ pipeline {
         stage('Get EC2 Public IP') {
             steps {
                 echo 'Reading EC2 public IP from Terraform output'
-                withCredentials([usernamePassword(
-                    credentialsId: 'aws-terraform-creds',
-                    usernameVariable: 'AWS_ACCESS_KEY_ID',
-                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                )]) {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-terraform-creds']]) {
+                    sh 'test -n "$AWS_ACCESS_KEY_ID" || (echo "AWS_ACCESS_KEY_ID is empty" && exit 1)'
                     script {
                         env.EC2_HOST = sh(
                             script: "cd ${TERRAFORM_DIR} && AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} output -raw public_ip",
