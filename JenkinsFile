@@ -13,7 +13,7 @@ pipeline {
 
         stage('Checkout Source Code') {
             steps {
-                git 'https://github.com/RomaHnat/spring-petclinic.git'
+                git branch: 'main', url: 'https://github.com/RomaHnat/spring-petclinic.git'
             }
         }
 
