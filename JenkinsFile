@@ -19,13 +19,14 @@ pipeline {
 
         stage('Compile Application') {
             steps {
-                sh 'mvn clean compile'
+                sh 'chmod +x mvnw'
+                sh './mvnw clean compile'
             }
         }
 
         stage('Run Unit Tests') {
             steps {
-                sh 'mvn test'
+                sh './mvnw test'
             }
         }
 
