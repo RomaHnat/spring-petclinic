@@ -166,10 +166,9 @@ pipeline {
                                     exit 1
                                 fi
 
-                                tar -xzf docker.tgz
-                                mv docker/docker ./docker
+                                tar -xzf docker.tgz --strip-components=1 docker/docker
                                 chmod +x ./docker
-                                rm -rf docker.tgz docker
+                                rm -f docker.tgz
                             fi
 
                             echo "$WORKSPACE/.bin/docker"
