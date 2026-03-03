@@ -4,6 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "romanhnat/petclinic:latest"
         TERRAFORM_DIR = "terraform-petclinic"
+        TERRAFORM_VERSION = '1.7.5'
         ANSIBLE_DIR = "spring-petclinic"
         MAVEN_CMD = './mvnw'
         SONAR_TOKEN = credentials('sonarqube-token')
@@ -49,12 +50,53 @@ pipeline {
             }
         }
 
+        stage('Setup Terraform CLI') {
+            steps {
+                script {
+                    env.TERRAFORM_CMD = sh(
+                        script: '''
+                            if command -v terraform >/dev/null 2>&1; then
+                                command -v terraform
+                                exit 0
+                            fi
+
+                            mkdir -p "$WORKSPACE/.bin"
+
+                            if [ ! -x "$WORKSPACE/.bin/terraform" ]; then
+                                cd "$WORKSPACE/.bin"
+                                rm -f terraform terraform.zip
+                                TERRAFORM_URL="https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip"
+
+                                if command -v curl >/dev/null 2>&1; then
+                                    curl -fsSL -o terraform.zip "$TERRAFORM_URL"
+                                elif command -v wget >/dev/null 2>&1; then
+                                    wget -qO terraform.zip "$TERRAFORM_URL"
+                                else
+                                    echo "Neither curl nor wget is available on Jenkins agent"
+                                    exit 1
+                                fi
+
+                                jar xf terraform.zip
+                                chmod +x terraform
+                                rm -f terraform.zip
+                            fi
+
+                            echo "$WORKSPACE/.bin/terraform"
+                        ''',
+                        returnStdout: true
+                    ).trim()
+
+                    echo "Using Terraform binary: ${env.TERRAFORM_CMD}"
+                }
+            }
+        }
+
         stage('Provision Infrastructure (Terraform)') {
             steps {
                 dir("${TERRAFORM_DIR}") {
-                    sh 'terraform version'
-                    sh 'terraform init'
-                    sh 'terraform apply -auto-approve'
+                    sh '${TERRAFORM_CMD} version'
+                    sh '${TERRAFORM_CMD} init'
+                    sh '${TERRAFORM_CMD} apply -auto-approve'
                 }
             }
         }
@@ -63,7 +105,7 @@ pipeline {
             steps {
                 script {
                     env.EC2_HOST = sh(
-                        script: "cd ${TERRAFORM_DIR} && terraform output -raw public_ip",
+                        script: "cd ${TERRAFORM_DIR} && ${TERRAFORM_CMD} output -raw public_ip",
                         returnStdout: true
                     ).trim()
                     echo "EC2 Public IP: ${env.EC2_HOST}"
