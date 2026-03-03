@@ -24,6 +24,7 @@ pipeline {
 
         stage('Compile Application') {
             steps {
+                sh 'rm -rf .terraform .bin || true'
                 sh 'chmod +x mvnw'
                 sh '${MAVEN_CMD} clean compile'
             }
