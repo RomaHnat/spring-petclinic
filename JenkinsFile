@@ -95,8 +95,10 @@ pipeline {
 
         stage('Provision Infrastructure (Terraform)') {
             steps {
+                echo 'Starting Terraform provision stage'
+                sh 'test -n "${TERRAFORM_CMD}" || (echo "TERRAFORM_CMD is empty" && exit 1)'
                 withCredentials([usernamePassword(
-                    credentialsId: "${AWS_CREDENTIALS_ID}",
+                    credentialsId: 'aws-terraform-creds',
                     usernameVariable: 'AWS_ACCESS_KEY_ID',
                     passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                 )]) {
@@ -111,8 +113,9 @@ pipeline {
 
         stage('Get EC2 Public IP') {
             steps {
+                echo 'Reading EC2 public IP from Terraform output'
                 withCredentials([usernamePassword(
-                    credentialsId: "${AWS_CREDENTIALS_ID}",
+                    credentialsId: 'aws-terraform-creds',
                     usernameVariable: 'AWS_ACCESS_KEY_ID',
                     passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                 )]) {
