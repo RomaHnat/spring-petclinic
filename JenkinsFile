@@ -263,15 +263,37 @@ pipeline {
         stage('Deploy to EC2') {
             steps {
                 sshagent(['ec2-ssh-key']) {
-                    sh """
-                    ssh -o StrictHostKeyChecking=no ${EC2_USER}@${env.EC2_HOST} << EOF
-                    docker stop petclinic || true
-                    docker rm petclinic || true
-                    docker pull ${DOCKER_IMAGE}
-                    docker run -d --name petclinic -p 8080:8080 ${DOCKER_IMAGE}
-                    EOF
-                    """
+                    sh '''
+                    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${EC2_USER}@${EC2_HOST} "docker rm -f petclinic || true; occupied=\\$(docker ps --filter 'publish=8080' -q); if [ -n \\\"\\$occupied\\\" ]; then docker rm -f \\$occupied || true; fi; docker pull ${DOCKER_IMAGE}; docker run -d --name petclinic --restart unless-stopped -p 8080:8080 ${DOCKER_IMAGE}"
+                    '''
                 }
+            }
+        }
+
+        stage('Smoke Test Deployment') {
+            steps {
+                sh '''
+                APP_URL="http://${EC2_HOST}:8080"
+                echo "Checking ${APP_URL}"
+                if command -v curl >/dev/null 2>&1; then
+                    for i in 1 2 3 4 5; do
+                        curl -fsS --max-time 10 "$APP_URL" >/dev/null && exit 0
+                        echo "Attempt $i failed, retrying..."
+                        sleep 8
+                    done
+                elif command -v wget >/dev/null 2>&1; then
+                    for i in 1 2 3 4 5; do
+                        wget -q --spider --timeout=10 "$APP_URL" && exit 0
+                        echo "Attempt $i failed, retrying..."
+                        sleep 8
+                    done
+                else
+                    echo "Neither curl nor wget is available for smoke test"
+                    exit 1
+                fi
+                echo "Smoke test failed for ${APP_URL}"
+                exit 1
+                '''
             }
         }
     }
