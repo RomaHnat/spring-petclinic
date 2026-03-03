@@ -97,7 +97,11 @@ pipeline {
             steps {
                 echo 'Starting Terraform provision stage'
                 sh 'test -n "${TERRAFORM_CMD}" || (echo "TERRAFORM_CMD is empty" && exit 1)'
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-terraform-creds']]) {
+                withCredentials([usernamePassword(
+                    credentialsId: 'aws-terraform-creds',
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                )]) {
                     sh 'test -n "$AWS_ACCESS_KEY_ID" || (echo "AWS_ACCESS_KEY_ID is empty" && exit 1)'
                     sh 'test -n "$AWS_SECRET_ACCESS_KEY" || (echo "AWS_SECRET_ACCESS_KEY is empty" && exit 1)'
                     dir("${TERRAFORM_DIR}") {
@@ -112,7 +116,11 @@ pipeline {
         stage('Get EC2 Public IP') {
             steps {
                 echo 'Reading EC2 public IP from Terraform output'
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-terraform-creds']]) {
+                withCredentials([usernamePassword(
+                    credentialsId: 'aws-terraform-creds',
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                )]) {
                     sh 'test -n "$AWS_ACCESS_KEY_ID" || (echo "AWS_ACCESS_KEY_ID is empty" && exit 1)'
                     script {
                         env.EC2_HOST = sh(
