@@ -173,12 +173,14 @@ pipeline {
 
         stage('Configure EC2 (Ansible)') {
             steps {
-                dir("${ANSIBLE_DIR}") {
-                    sh """
-                    echo "[web]" > inventory.ini
-                    echo "${env.EC2_HOST} ansible_user=ec2-user" >> inventory.ini
-                    ${ANSIBLE_CMD} -i inventory.ini playbook.yml
-                    """
+                sshagent(['ec2-ssh-key']) {
+                    dir("${ANSIBLE_DIR}") {
+                        sh """
+                        echo "[web]" > inventory.ini
+                        echo "${env.EC2_HOST} ansible_user=${EC2_USER} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'" >> inventory.ini
+                        ANSIBLE_HOST_KEY_CHECKING=False ${ANSIBLE_CMD} -i inventory.ini playbook.yml
+                        """
+                    }
                 }
             }
         }
