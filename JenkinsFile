@@ -5,10 +5,11 @@ pipeline {
         DOCKER_IMAGE = "romanhnat/petclinic:latest"
         TERRAFORM_DIR = "."
         TERRAFORM_VERSION = '1.7.5'
-        ANSIBLE_DIR = "spring-petclinic"
+        ANSIBLE_DIR = "."
         MAVEN_CMD = './mvnw'
         SONAR_TOKEN = credentials('sonarqube-token')
         PROJECT_KEY = 'spring-petclinic'
+        AWS_CREDENTIALS_ID = 'aws-terraform-creds'
         EC2_USER = "ec2-user"
         EC2_HOST = "54.162.235.126"
     }
@@ -93,22 +94,34 @@ pipeline {
 
         stage('Provision Infrastructure (Terraform)') {
             steps {
-                dir("${TERRAFORM_DIR}") {
-                    sh '${TERRAFORM_CMD} version'
-                    sh '${TERRAFORM_CMD} init'
-                    sh '${TERRAFORM_CMD} apply -auto-approve'
+                withCredentials([usernamePassword(
+                    credentialsId: "${AWS_CREDENTIALS_ID}",
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                )]) {
+                    dir("${TERRAFORM_DIR}") {
+                        sh '${TERRAFORM_CMD} version'
+                        sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} init'
+                        sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} apply -auto-approve'
+                    }
                 }
             }
         }
 
         stage('Get EC2 Public IP') {
             steps {
-                script {
-                    env.EC2_HOST = sh(
-                        script: "cd ${TERRAFORM_DIR} && ${TERRAFORM_CMD} output -raw public_ip",
-                        returnStdout: true
-                    ).trim()
-                    echo "EC2 Public IP: ${env.EC2_HOST}"
+                withCredentials([usernamePassword(
+                    credentialsId: "${AWS_CREDENTIALS_ID}",
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                )]) {
+                    script {
+                        env.EC2_HOST = sh(
+                            script: "cd ${TERRAFORM_DIR} && AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} output -raw public_ip",
+                            returnStdout: true
+                        ).trim()
+                        echo "EC2 Public IP: ${env.EC2_HOST}"
+                    }
                 }
             }
         }
