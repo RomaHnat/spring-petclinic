@@ -173,11 +173,15 @@ pipeline {
 
         stage('Configure EC2 (Ansible)') {
             steps {
-                sshagent(['ec2-ssh-key']) {
+                withCredentials([sshUserPrivateKey(
+                    credentialsId: 'ec2-ssh-key',
+                    keyFileVariable: 'SSH_KEY_FILE',
+                    usernameVariable: 'SSH_USER'
+                )]) {
                     dir("${ANSIBLE_DIR}") {
                         sh """
                         echo "[web]" > inventory.ini
-                        echo "${env.EC2_HOST} ansible_user=${EC2_USER} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'" >> inventory.ini
+                        echo "${env.EC2_HOST} ansible_user=${EC2_USER} ansible_ssh_private_key_file=${SSH_KEY_FILE} ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'" >> inventory.ini
                         ANSIBLE_HOST_KEY_CHECKING=False ${ANSIBLE_CMD} -i inventory.ini playbook.yml
                         """
                     }
@@ -211,9 +215,13 @@ pipeline {
 
         stage('Deploy to EC2') {
             steps {
-                sshagent(['ec2-ssh-key']) {
+                withCredentials([sshUserPrivateKey(
+                    credentialsId: 'ec2-ssh-key',
+                    keyFileVariable: 'SSH_KEY_FILE',
+                    usernameVariable: 'SSH_USER'
+                )]) {
                     sh """
-                    ssh -o StrictHostKeyChecking=no ${EC2_USER}@${env.EC2_HOST} << EOF
+                    ssh -i ${SSH_KEY_FILE} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${EC2_USER}@${env.EC2_HOST} << EOF
                     docker stop petclinic || true
                     docker rm petclinic || true
                     docker pull ${DOCKER_IMAGE}
