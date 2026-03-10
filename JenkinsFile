@@ -11,7 +11,7 @@ pipeline {
         PROJECT_KEY = 'spring-petclinic'
         AWS_CREDENTIALS_ID = 'aws-terraform-creds'
         EC2_USER = "ec2-user"
-        EC2_HOST = "54.162.235.126"
+        EC2_HOST = "54.81.27.17"
     }
 
     stages {
