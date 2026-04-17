@@ -202,16 +202,16 @@ pipeline {
                     sh '${TERRAFORM_CMD} version'
                     sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} init'
                     sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} apply -auto-approve | tee /tmp/tf_apply.txt'
-                    script {
-                        env.EC2_HOST = sh(
-                            script: "grep 'public_ip' /tmp/tf_apply.txt | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+'",
-                            returnStdout: true
-                        ).trim()
-                        if (!env.EC2_HOST) {
-                            error("Could not extract EC2 IP from terraform apply output. Check /tmp/tf_apply.txt.")
-                        }
-                        echo "EC2 Public IP: ${env.EC2_HOST}"
+                }
+                script {
+                    env.EC2_HOST = sh(
+                        script: "grep 'public_ip' /tmp/tf_apply.txt | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+'",
+                        returnStdout: true
+                    ).trim()
+                    if (!env.EC2_HOST) {
+                        error("Could not extract EC2 IP from terraform apply output. Check /tmp/tf_apply.txt.")
                     }
+                    echo "EC2 Public IP: ${env.EC2_HOST}"
                 }
             }
         }
