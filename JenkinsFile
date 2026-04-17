@@ -202,7 +202,7 @@ pipeline {
                     sh '${TERRAFORM_CMD} version'
                     sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} init'
                     sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} apply -auto-approve'
-                    sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} output -raw public_ip > ec2_ip.txt'
+                    sh 'IP=$(AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} output -no-color -raw public_ip); echo "$IP" > ec2_ip.txt; echo "DEBUG ip: $IP"'
                 }
                 script {
                     env.EC2_HOST = readFile('ec2_ip.txt').trim()
