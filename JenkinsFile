@@ -16,6 +16,12 @@ pipeline {
 
     stages {
 
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
         stage('Checkout Source Code') {
             steps {
                 git branch: 'main', url: 'https://github.com/RomaHnat/spring-petclinic.git'
@@ -299,6 +305,9 @@ pipeline {
     }
 
     post {
+        always {
+            cleanWs()
+        }
         success {
             echo "Full CI/CD Pipeline Executed Successfully!"
         }
