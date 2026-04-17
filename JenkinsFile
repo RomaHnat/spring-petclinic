@@ -203,17 +203,15 @@ pipeline {
                         sh '${TERRAFORM_CMD} version'
                         sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} init'
                         sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} apply -auto-approve'
-                        script {
-                            def ip = sh(
-                                script: "AWS_EC2_METADATA_DISABLED=true ${env.TERRAFORM_CMD} output -raw public_ip",
-                                returnStdout: true
-                            ).trim()
-                            if (!ip) {
-                                error("terraform output returned empty IP. Check S3 backend and apply logs.")
-                            }
-                            env.EC2_HOST = ip
-                            echo "EC2 Public IP: ${env.EC2_HOST}"
+                        sh "AWS_EC2_METADATA_DISABLED=true ${env.TERRAFORM_CMD} output -raw public_ip > /tmp/tf_ip.txt"
+                    }
+                    script {
+                        def ip = readFile('/tmp/tf_ip.txt').trim()
+                        if (!ip) {
+                            error("terraform output returned empty IP. Check S3 backend and apply logs.")
                         }
+                        env.EC2_HOST = ip
+                        echo "EC2 Public IP: ${env.EC2_HOST}"
                     }
                 }
             }
