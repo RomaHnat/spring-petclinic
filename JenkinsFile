@@ -218,10 +218,14 @@ pipeline {
                 )]) {
                     sh 'test -n "$AWS_ACCESS_KEY_ID" || (echo "AWS_ACCESS_KEY_ID is empty" && exit 1)'
                     script {
-                        env.EC2_HOST = sh(
+                        def ip = sh(
                             script: "cd ${TERRAFORM_DIR} && AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} output -raw public_ip",
                             returnStdout: true
                         ).trim()
+                        if (!ip || ip == "54.81.27.17") {
+                            error("EC2 IP is invalid or stale: '${ip}'. Terraform output may have failed.")
+                        }
+                        env.EC2_HOST = ip
                         echo "EC2 Public IP: ${env.EC2_HOST}"
                     }
                 }
