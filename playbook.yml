@@ -16,3 +16,9 @@
       service:
         name: docker
         enabled: yes
+
+    - name: Add ec2-user to docker group
+      user:
+        name: ec2-user
+        groups: docker
+        append: yes
