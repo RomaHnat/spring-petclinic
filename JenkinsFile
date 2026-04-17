@@ -202,10 +202,10 @@ pipeline {
                     sh '${TERRAFORM_CMD} version'
                     sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} init'
                     sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} apply -auto-approve'
-                    sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} output -raw public_ip > /tmp/ec2_ip.txt'
+                    sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} output -raw public_ip > ec2_ip.txt'
                 }
                 script {
-                    env.EC2_HOST = readFile('/tmp/ec2_ip.txt').trim()
+                    env.EC2_HOST = readFile('ec2_ip.txt').trim()
                     if (!env.EC2_HOST) {
                         error("Could not extract EC2 IP from terraform apply output. Check /tmp/tf_apply.txt.")
                     }
