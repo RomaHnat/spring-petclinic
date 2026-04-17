@@ -203,30 +203,17 @@ pipeline {
                         sh '${TERRAFORM_CMD} version'
                         sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} init'
                         sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} apply -auto-approve'
-                    }
-                }
-            }
-        }
-
-        stage('Get EC2 Public IP') {
-            steps {
-                echo 'Reading EC2 public IP from Terraform output'
-                withCredentials([usernamePassword(
-                    credentialsId: "${AWS_CREDENTIALS_ID}",
-                    usernameVariable: 'AWS_ACCESS_KEY_ID',
-                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
-                )]) {
-                    sh 'test -n "$AWS_ACCESS_KEY_ID" || (echo "AWS_ACCESS_KEY_ID is empty" && exit 1)'
-                    script {
-                        def ip = sh(
-                            script: "cd ${TERRAFORM_DIR} && AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} output -raw public_ip",
-                            returnStdout: true
-                        ).trim()
-                        if (!ip || ip == "54.81.27.17") {
-                            error("EC2 IP is invalid or stale: '${ip}'. Terraform output may have failed.")
+                        script {
+                            def ip = sh(
+                                script: "AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} output -raw public_ip",
+                                returnStdout: true
+                            ).trim()
+                            if (!ip) {
+                                error("terraform output returned empty IP. Check S3 backend and apply logs.")
+                            }
+                            env.EC2_HOST = ip
+                            echo "EC2 Public IP: ${env.EC2_HOST}"
                         }
-                        env.EC2_HOST = ip
-                        echo "EC2 Public IP: ${env.EC2_HOST}"
                     }
                 }
             }
