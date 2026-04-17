@@ -199,18 +199,17 @@ pipeline {
                 )]) {
                     sh 'test -n "$AWS_ACCESS_KEY_ID" || (echo "AWS_ACCESS_KEY_ID is empty" && exit 1)'
                     sh 'test -n "$AWS_SECRET_ACCESS_KEY" || (echo "AWS_SECRET_ACCESS_KEY is empty" && exit 1)'
-                    dir("${TERRAFORM_DIR}") {
-                        sh '${TERRAFORM_CMD} version'
-                        sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} init'
-                        sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} apply -auto-approve'
-                        sh "AWS_EC2_METADATA_DISABLED=true ${env.TERRAFORM_CMD} output -raw public_ip > /tmp/tf_ip.txt"
-                    }
+                    sh '${TERRAFORM_CMD} version'
+                    sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} init'
+                    sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} apply -auto-approve | tee /tmp/tf_apply.txt'
                     script {
-                        def ip = readFile('/tmp/tf_ip.txt').trim()
-                        if (!ip) {
-                            error("terraform output returned empty IP. Check S3 backend and apply logs.")
+                        env.EC2_HOST = sh(
+                            script: "grep 'public_ip' /tmp/tf_apply.txt | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+'",
+                            returnStdout: true
+                        ).trim()
+                        if (!env.EC2_HOST) {
+                            error("Could not extract EC2 IP from terraform apply output. Check /tmp/tf_apply.txt.")
                         }
-                        env.EC2_HOST = ip
                         echo "EC2 Public IP: ${env.EC2_HOST}"
                     }
                 }
