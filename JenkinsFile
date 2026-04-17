@@ -11,7 +11,7 @@ pipeline {
         PROJECT_KEY = 'spring-petclinic'
         AWS_CREDENTIALS_ID = 'aws-terraform-creds'
         EC2_USER = "ec2-user"
-        EC2_HOST = "54.81.27.17"
+        EC2_HOST = ""
     }
 
     stages {
@@ -215,6 +215,17 @@ pipeline {
                             echo "EC2 Public IP: ${env.EC2_HOST}"
                         }
                     }
+                }
+            }
+        }
+
+        stage('Confirm EC2 IP') {
+            steps {
+                script {
+                    if (!env.EC2_HOST) {
+                        error("EC2_HOST is empty — terraform output did not set the IP. Check Provision stage logs.")
+                    }
+                    echo "Confirmed EC2 IP: ${env.EC2_HOST}"
                 }
             }
         }
