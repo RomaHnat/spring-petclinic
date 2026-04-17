@@ -205,7 +205,7 @@ pipeline {
                         sh 'AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} apply -auto-approve'
                         script {
                             def ip = sh(
-                                script: "AWS_EC2_METADATA_DISABLED=true ${TERRAFORM_CMD} output -raw public_ip",
+                                script: "AWS_EC2_METADATA_DISABLED=true ${env.TERRAFORM_CMD} output -raw public_ip",
                                 returnStdout: true
                             ).trim()
                             if (!ip) {
